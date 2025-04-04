@@ -71,11 +71,13 @@ const createWindow = async () => {
   mainWindow = new BrowserWindow({
     x: 50,
     y: 50,
-    width: 448,
-    height: 728,
+
+    width: 728,
+    height: 448,
     // skipTaskbar: true,
-    frame: false,
-    // transparent: true,
+    frame: false, // ✅ Remove default window frame
+    minimizable: false,
+    transparent: true, // Optional: Make background transparent
     icon: getAssetPath('icon.png'),
     webPreferences: {
       preload: app.isPackaged
@@ -84,6 +86,8 @@ const createWindow = async () => {
     },
   });
 
+  mainWindow.setContentProtection(true);
+  mainWindow.setAlwaysOnTop(true, 'screen-saver');
   mainWindow.loadURL(resolveHtmlPath('index.html'));
 
   mainWindow.on('ready-to-show', () => {

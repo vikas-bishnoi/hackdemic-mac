@@ -74,7 +74,17 @@ const configuration: webpack.Configuration = {
               importLoaders: 1,
             },
           },
-          'sass-loader',
+          {
+            loader: 'postcss-loader',
+            options: {
+              postcssOptions: {
+                plugins: [
+                  require('@tailwindcss/postcss'), // Use the main Tailwind CSS package
+                  require('autoprefixer'), // Autoprefixer for browser compatibility
+                ],
+              },
+            },
+          },
           'postcss-loader',
         ],
         include: /\.module\.s?(c|a)ss$/,
