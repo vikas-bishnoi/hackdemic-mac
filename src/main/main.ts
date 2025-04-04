@@ -9,10 +9,11 @@
  * `./src/main.js` using webpack. This gives us some performance wins.
  */
 import path from 'path';
-import { app, BrowserWindow, shell, ipcMain } from 'electron';
+import { app, BrowserWindow, shell, ipcMain, globalShortcut } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import { resolveHtmlPath } from './util';
+const fs = require('fs');
 
 class AppUpdater {
   constructor() {
@@ -69,7 +70,7 @@ const createWindow = async () => {
   };
 
   mainWindow = new BrowserWindow({
-    x: 50,
+    x: 1250,
     y: 50,
 
     width: 728,
@@ -131,11 +132,24 @@ app.on('window-all-closed', () => {
 app
   .whenReady()
   .then(() => {
+    globalShortcut.register('Alt+X', () => {
+      if (mainWindow) mainWindow.webContents.send('capture-screenshot');
+    });
     createWindow();
     app.on('activate', () => {
       // On macOS it's common to re-create a window in the app when the
       // dock icon is clicked and there are no other windows open.
       if (mainWindow === null) createWindow();
+    });
+    ipcMain.on('save-screenshot', (event, dataUrl) => {
+      const base64 = dataUrl.replace(/^data:image\/png;base64,/, '');
+      const buffer = Buffer.from(base64, 'base64');
+      const filePath = path.join(__dirname, 'screenshot.png');
+
+      fs.writeFile(filePath, buffer, (err) => {
+        if (err) return console.error('Failed to save screenshot:', err);
+        console.log('Screenshot saved to', filePath);
+      });
     });
   })
   .catch(console.log);
