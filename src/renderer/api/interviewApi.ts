@@ -9,7 +9,7 @@ export interface User {
 }
 
 export interface ImageType {
-  image: string;
+  image: Blob | File;
 }
 
 export const interviewApi = {

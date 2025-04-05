@@ -15,25 +15,8 @@ import log from 'electron-log';
 import { resolveHtmlPath } from './util';
 const tesseract = require('node-tesseract-ocr');
 const fs = require('fs');
-// const setaffinity = require('./../../build/Release/setaffinity.node');
-// const makewindowtransparent = require('./../../build/Release/makewindowtransparent.node');
-const edge = require('edge-js');
 
-const setAffinity = edge.func(`
-    using System;
-    using System.Runtime.InteropServices;
-    using System.Threading.Tasks;
-
-    public class Startup {
-        [DllImport("user32.dll")]
-        static extern bool SetWindowDisplayAffinity(IntPtr hWnd, uint dwAffinity);
-
-        public async Task<object> Invoke(dynamic input) {
-            IntPtr hwnd = new IntPtr((int)input);
-            return SetWindowDisplayAffinity(hwnd, 1); // WDA_MONITOR
-        }
-    }
-`);
+const makewindowtransparent = require('./../../build/Release/makewindowtransparent.node');
 
 class AppUpdater {
   constructor() {
@@ -130,7 +113,6 @@ const createWindow = async () => {
     },
   });
 
-  mainWindow.setContentProtection(true);
   mainWindow.setAlwaysOnTop(true, 'screen-saver');
   // mainWindow.setVisibleOnAllWorkspaces(true); // Keep it in all virtual desktops
 
@@ -140,28 +122,8 @@ const createWindow = async () => {
     const hwndBuffer = mainWindow?.getNativeWindowHandle();
     const hwnd = hwndBuffer?.readBigUInt64LE();
 
-    setAffinity(hwnd, (error: any, result: any) => {
-      if (error) {
-        console.error('Error setting display affinity:', error);
-      } else {
-        console.log('Affinity set successfully:', result);
-      }
-    });
-
     console.log('mainWindow', hwnd);
-    // makewindowtransparent.setTransparency(Number(hwnd), 100); // alpha: 0-255
-    // makewindowtransparent.excludeFromCapture(Number(hwnd));
-    // setTimeout(() => {
-    //   makewindowtransparent.excludeFromCapture(Number(hwnd));
-    // }, 5000); // give the window time to "show"
-    // if (hwnd) setaffinity.setWindowAffinity(hwnd, false);
-    // setNoCapture({ hwnd }, (error, result) => {
-    //   if (error) {
-    //     console.error('Failed to set display affinity:', error);
-    //   } else {
-    //     console.log('SetWindowDisplayAffinity success:', result);
-    //   }
-    // });
+    makewindowtransparent.setAffinity(hwnd);
 
     if (!mainWindow) {
       throw new Error('"mainWindow" is not defined');
@@ -217,12 +179,6 @@ app
       const picturesPath = app.getPath('pictures'); // or use 'documents', 'desktop', etc.
       const fileName = `dsa-question-${Date.now()}.png`;
       const fullPath = path.join(picturesPath, fileName);
-
-      fs.writeFile(fullPath, buffer, async (err: Error) => {
-        if (err) return console.error('Failed to save screenshot:', err);
-        console.log('ASD');
-        await runOCR(fullPath);
-      });
     });
   })
   .catch(console.log);

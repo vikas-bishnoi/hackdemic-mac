@@ -1,8 +1,11 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Solution from './components/main/solution';
 import { interviewApi } from './api/interviewApi';
+import { base64ToBlob } from './lib/utils/base64toBlob';
 
 export default function App() {
+  const [solutionData, setSolutionData] = useState('');
+
   const captureScreenShot = async () => {
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: false,
@@ -35,18 +38,20 @@ export default function App() {
           ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
           const dataURL = canvas.toDataURL('image/png');
+          const imageData: Blob = base64ToBlob(dataURL);
 
           stream.getTracks().forEach((track) => track.stop());
 
-          resolve(dataURL); // returns screenshot
+          resolve(imageData); // returns screenshot
         }, 100);
       };
     });
   };
 
-  const getSolution = async (imageData: string) => {
+  const uploadAndGetSolution = async (imageData: Blob) => {
     try {
-      const response = await interviewApi.getSolution({ image: imageData });
+      const { data } = await interviewApi.getSolution({ image: imageData });
+      setSolutionData('data');
     } catch (e) {
       console.log('error', e);
     }
@@ -54,13 +59,8 @@ export default function App() {
 
   useEffect(() => {
     window.electronAPI.onCaptureSS(async () => {
-      const screenshot = await captureScreenShot();
-      // Send to main process to save
-      window.electronAPI.saveScreenshot(screenshot);
-    });
-
-    window.electronAPI.onProcessImageData(async (data: string) => {
-      await getSolution(data);
+      const screenshot: any = await captureScreenShot();
+      await uploadAndGetSolution(screenshot);
     });
   }, []);
   return (
