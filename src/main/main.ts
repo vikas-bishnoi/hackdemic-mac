@@ -13,7 +13,27 @@ import { app, BrowserWindow, shell, ipcMain, globalShortcut } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import { resolveHtmlPath } from './util';
+const tesseract = require('node-tesseract-ocr');
 const fs = require('fs');
+// const setaffinity = require('./../../build/Release/setaffinity.node');
+// const makewindowtransparent = require('./../../build/Release/makewindowtransparent.node');
+const edge = require('edge-js');
+
+const setAffinity = edge.func(`
+    using System;
+    using System.Runtime.InteropServices;
+    using System.Threading.Tasks;
+
+    public class Startup {
+        [DllImport("user32.dll")]
+        static extern bool SetWindowDisplayAffinity(IntPtr hWnd, uint dwAffinity);
+
+        public async Task<object> Invoke(dynamic input) {
+            IntPtr hwnd = new IntPtr((int)input);
+            return SetWindowDisplayAffinity(hwnd, 1); // WDA_MONITOR
+        }
+    }
+`);
 
 class AppUpdater {
   constructor() {
@@ -23,13 +43,34 @@ class AppUpdater {
   }
 }
 
+const appPath = app.isPackaged
+  ? path.join(process.resourcesPath)
+  : path.join(process.cwd(), 'src', 'resources');
+
+const binaryPath = path.join(
+  appPath,
+  'assets',
+  'windows',
+  'tesseract',
+  'tesseract.exe',
+);
+const dataPath = path.join(
+  appPath,
+  'assets',
+  'windows',
+  'tesseract',
+  'tessdata',
+);
+
 let mainWindow: BrowserWindow | null = null;
 
-ipcMain.on('ipc-example', async (event, arg) => {
-  const msgTemplate = (pingPong: string) => `IPC test: ${pingPong}`;
-  console.log(msgTemplate(arg));
-  event.reply('ipc-example', msgTemplate('pong'));
-});
+const config = {
+  lang: 'eng',
+  oem: 1,
+  psm: 6,
+  binary: binaryPath,
+  config: [`--tessdata-dir`, dataPath],
+};
 
 if (process.env.NODE_ENV === 'production') {
   const sourceMapSupport = require('source-map-support');
@@ -57,9 +98,9 @@ const installExtensions = async () => {
 };
 
 const createWindow = async () => {
-  if (isDebug) {
-    await installExtensions();
-  }
+  // if (isDebug) {
+  //   await installExtensions();
+  // }
 
   const RESOURCES_PATH = app.isPackaged
     ? path.join(process.resourcesPath, 'assets')
@@ -81,6 +122,8 @@ const createWindow = async () => {
     transparent: true, // Optional: Make background transparent
     icon: getAssetPath('icon.png'),
     webPreferences: {
+      devTools: false,
+      // offscreen: true,
       preload: app.isPackaged
         ? path.join(__dirname, 'preload.js')
         : path.join(__dirname, '../../.erb/dll/preload.js'),
@@ -89,17 +132,41 @@ const createWindow = async () => {
 
   mainWindow.setContentProtection(true);
   mainWindow.setAlwaysOnTop(true, 'screen-saver');
+  // mainWindow.setVisibleOnAllWorkspaces(true); // Keep it in all virtual desktops
+
   mainWindow.loadURL(resolveHtmlPath('index.html'));
 
   mainWindow.on('ready-to-show', () => {
+    const hwndBuffer = mainWindow?.getNativeWindowHandle();
+    const hwnd = hwndBuffer?.readBigUInt64LE();
+
+    setAffinity(hwnd, (error: any, result: any) => {
+      if (error) {
+        console.error('Error setting display affinity:', error);
+      } else {
+        console.log('Affinity set successfully:', result);
+      }
+    });
+
+    console.log('mainWindow', hwnd);
+    // makewindowtransparent.setTransparency(Number(hwnd), 100); // alpha: 0-255
+    // makewindowtransparent.excludeFromCapture(Number(hwnd));
+    // setTimeout(() => {
+    //   makewindowtransparent.excludeFromCapture(Number(hwnd));
+    // }, 5000); // give the window time to "show"
+    // if (hwnd) setaffinity.setWindowAffinity(hwnd, false);
+    // setNoCapture({ hwnd }, (error, result) => {
+    //   if (error) {
+    //     console.error('Failed to set display affinity:', error);
+    //   } else {
+    //     console.log('SetWindowDisplayAffinity success:', result);
+    //   }
+    // });
+
     if (!mainWindow) {
       throw new Error('"mainWindow" is not defined');
     }
-    if (process.env.START_MINIMIZED) {
-      mainWindow.minimize();
-    } else {
-      mainWindow.show();
-    }
+    mainWindow.show();
   });
 
   mainWindow.on('closed', () => {
@@ -117,17 +184,20 @@ const createWindow = async () => {
   new AppUpdater();
 };
 
-/**
- * Add event listeners...
- */
+async function runOCR(imagePath: string) {
+  console.log('HELOR', imagePath);
 
-app.on('window-all-closed', () => {
-  // Respect the OSX convention of having the application in memory even
-  // after all windows have been closed
-  if (process.platform !== 'darwin') {
-    app.quit();
+  try {
+    const text = await tesseract.recognize(imagePath, config);
+    console.log('text', text);
+    return text;
+  } catch (err) {
+    console.error('OCR failed:', err);
+    return '';
   }
-});
+}
+
+app.disableHardwareAcceleration();
 
 app
   .whenReady()
@@ -144,12 +214,27 @@ app
     ipcMain.on('save-screenshot', (event, dataUrl) => {
       const base64 = dataUrl.replace(/^data:image\/png;base64,/, '');
       const buffer = Buffer.from(base64, 'base64');
-      const filePath = path.join(__dirname, 'screenshot.png');
+      const picturesPath = app.getPath('pictures'); // or use 'documents', 'desktop', etc.
+      const fileName = `dsa-question-${Date.now()}.png`;
+      const fullPath = path.join(picturesPath, fileName);
 
-      fs.writeFile(filePath, buffer, (err) => {
+      fs.writeFile(fullPath, buffer, async (err: Error) => {
         if (err) return console.error('Failed to save screenshot:', err);
-        console.log('Screenshot saved to', filePath);
+        console.log('ASD');
+        await runOCR(fullPath);
       });
     });
   })
   .catch(console.log);
+
+/**
+ * Add event listeners...
+ */
+
+app.on('window-all-closed', () => {
+  // Respect the OSX convention of having the application in memory even
+  // after all windows have been closed
+  if (process.platform !== 'darwin') {
+    app.quit();
+  }
+});
