@@ -17,22 +17,6 @@ const apiClient = axios.create({
   withCredentials: true,
 });
 
-// Add request interceptor to add auth token
-apiClient.interceptors.request.use(
-  (config) => {
-    const value = getCookie('token');
-    console.log(value);
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  },
-);
-
 // Add response interceptor to handle token refresh and auth errors
 apiClient.interceptors.response.use(
   (response) => response,
@@ -65,4 +49,4 @@ apiFormClient.interceptors.response.use(
   },
 );
 
-export default apiClient;
+export { apiClient, apiFormClient };

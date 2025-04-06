@@ -1,4 +1,4 @@
-import apiClient from './axios';
+import { apiFormClient, apiClient } from './axios';
 
 export interface User {
   id: string;
@@ -14,7 +14,7 @@ export interface ImageType {
 
 export const interviewApi = {
   getSolution: async (formData: ImageType) => {
-    const response = await apiClient.post(
+    const response = await apiFormClient.post(
       '/interview/generate-solution',
       formData,
     );

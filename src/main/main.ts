@@ -78,7 +78,7 @@ const createWindow = async () => {
   };
 
   mainWindow = new BrowserWindow({
-    x: 1650,
+    x: 50,
     y: 50,
 
     width: 768,

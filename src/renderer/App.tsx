@@ -72,6 +72,7 @@ export default function App() {
     }
     setIsLoading(false);
   };
+
   useEffect(() => {
     window.electronAPI.onCaptureSS(async () => {
       const screenshot: any = await captureScreenShot();
@@ -88,7 +89,7 @@ export default function App() {
     return <LoginPage setIsAuthenticated={setIsAuthenticated} />;
   }
   return (
-    <div className="h-full w-full p-4">
+    <div className="h-full  w-full p-4">
       <Solution />
     </div>
   );
