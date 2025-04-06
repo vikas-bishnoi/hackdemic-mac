@@ -1,15 +1,12 @@
-/* eslint global-require: off, no-console: off, promise/always-return: off */
-
-/**
- * This module executes inside of electron's main process. You can start
- * electron renderer process from here and communicate with the other processes
- * through IPC.
- *
- * When running `npm run build` or `npm run build:main`, this file is compiled to
- * `./src/main.js` using webpack. This gives us some performance wins.
- */
 import path from 'path';
-import { app, BrowserWindow, shell, ipcMain, globalShortcut } from 'electron';
+import {
+  app,
+  BrowserWindow,
+  shell,
+  ipcMain,
+  globalShortcut,
+  session,
+} from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import { resolveHtmlPath } from './util';
@@ -67,19 +64,6 @@ if (isDebug) {
   require('electron-debug').default();
 }
 
-const installExtensions = async () => {
-  const installer = require('electron-devtools-installer');
-  const forceDownload = !!process.env.UPGRADE_EXTENSIONS;
-  const extensions = ['REACT_DEVELOPER_TOOLS'];
-
-  return installer
-    .default(
-      extensions.map((name) => installer[name]),
-      forceDownload,
-    )
-    .catch(console.log);
-};
-
 const createWindow = async () => {
   // if (isDebug) {
   //   await installExtensions();
@@ -94,7 +78,7 @@ const createWindow = async () => {
   };
 
   mainWindow = new BrowserWindow({
-    x: 1250,
+    x: 1650,
     y: 50,
 
     width: 728,
@@ -105,7 +89,7 @@ const createWindow = async () => {
     transparent: true, // Optional: Make background transparent
     icon: getAssetPath('icon.png'),
     webPreferences: {
-      devTools: false,
+      // devTools: false,
       // offscreen: true,
       preload: app.isPackaged
         ? path.join(__dirname, 'preload.js')
@@ -146,24 +130,29 @@ const createWindow = async () => {
   new AppUpdater();
 };
 
-async function runOCR(imagePath: string) {
-  console.log('HELOR', imagePath);
-
-  try {
-    const text = await tesseract.recognize(imagePath, config);
-    console.log('text', text);
-    return text;
-  } catch (err) {
-    console.error('OCR failed:', err);
-    return '';
-  }
-}
-
 app.disableHardwareAcceleration();
-
 app
   .whenReady()
   .then(() => {
+    session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+      // eslint-disable-next-line promise/no-callback-in-promise
+      callback({
+        responseHeaders: {
+          ...details.responseHeaders,
+          'Content-Security-Policy': [
+            "default-src 'self'; " +
+              "connect-src 'self' blob: http://localhost:8000 https://devapi.hackdemic.com wss://devapi.hackdemic.com wss://api.hackdemic.com ws://localhost:8000 https://mazic-prod-assets.s3-accelerate.amazonaws.com https://api.hackdemic.com https://mazic-dev-assets.s3.eu-west-2.amazonaws.com; " +
+              "script-src 'self' 'unsafe-eval'; " +
+              "style-src 'self' 'unsafe-inline'; " +
+              "font-src 'self' data:; " +
+              "frame-src 'self'; " +
+              "img-src 'self' data:;" +
+              "media-src 'self' blob:;",
+          ],
+        },
+      });
+    });
+
     globalShortcut.register('Alt+X', () => {
       if (mainWindow) mainWindow.webContents.send('capture-screenshot');
     });
@@ -179,6 +168,13 @@ app
       const picturesPath = app.getPath('pictures'); // or use 'documents', 'desktop', etc.
       const fileName = `dsa-question-${Date.now()}.png`;
       const fullPath = path.join(picturesPath, fileName);
+    });
+
+    ipcMain.on('resize', (event, dimensions) => {
+      console.log(dimensions);
+      // mainWindow?.setSize(dimensions.width, dimensions.height);
+      mainWindow?.setSize(dimensions.width, dimensions.height);
+      console.log(dimensions);
     });
   })
   .catch(console.log);

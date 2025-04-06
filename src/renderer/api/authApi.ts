@@ -20,6 +20,10 @@ export interface RegisterCredentials {
 }
 
 export const authApi = {
+  authenticate: async () => {
+    const response = await apiClient.get('/auth/authenticate');
+    return response.data;
+  },
   login: async (formData: LoginCredentials) => {
     const response = await apiClient.post('/auth/login', formData);
     return response.data;

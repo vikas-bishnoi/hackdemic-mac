@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import Solution from './components/main/solution';
 import { interviewApi } from './api/interviewApi';
-import { base64ToBlob } from './lib/utils/base64toBlob';
+import { base64ToBlob } from './lib/helpers/base64toBlob';
+import LoginPage from './components/main/login';
+import { authApi } from './api/authApi';
 
 export default function App() {
-  const [solutionData, setSolutionData] = useState('');
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const captureScreenShot = async () => {
     const stream = await navigator.mediaDevices.getUserMedia({
@@ -51,18 +53,35 @@ export default function App() {
   const uploadAndGetSolution = async (imageData: Blob) => {
     try {
       const { data } = await interviewApi.getSolution({ image: imageData });
-      setSolutionData('data');
+      // setSolutionData('data');
     } catch (e) {
       console.log('error', e);
     }
   };
 
+  const authenticate = async () => {
+    try {
+      authApi.authenticate();
+    } catch (e) {}
+  };
   useEffect(() => {
+    window.electronAPI.onAuthenticate(async () => {
+      await authenticate();
+    });
     window.electronAPI.onCaptureSS(async () => {
       const screenshot: any = await captureScreenShot();
       await uploadAndGetSolution(screenshot);
     });
+
+    // DELETE THESE
+    if (!isAuthenticated) {
+      window.electronAPI.resize(300, 280);
+    }
   }, []);
+
+  if (!isAuthenticated) {
+    return <LoginPage setIsAuthenticated={setIsAuthenticated} />;
+  }
   return (
     <div className="h-full w-full p-4">
       <Solution />
