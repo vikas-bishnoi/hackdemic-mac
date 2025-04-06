@@ -4,9 +4,11 @@ import { interviewApi } from './api/interviewApi';
 import { base64ToBlob } from './lib/helpers/base64toBlob';
 import LoginPage from './components/main/login';
 import { authApi } from './api/authApi';
+import CircularLoader from './components/main/circular-loader';
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const captureScreenShot = async () => {
     const stream = await navigator.mediaDevices.getUserMedia({
@@ -60,25 +62,28 @@ export default function App() {
   };
 
   const authenticate = async () => {
+    setIsLoading(true);
     try {
-      authApi.authenticate();
-    } catch (e) {}
+      await authApi.authenticate();
+      setIsAuthenticated(true);
+    } catch (e) {
+      setIsAuthenticated(false);
+      window.electronAPI.resize(300, 280);
+    }
+    setIsLoading(false);
   };
   useEffect(() => {
-    window.electronAPI.onAuthenticate(async () => {
-      await authenticate();
-    });
     window.electronAPI.onCaptureSS(async () => {
       const screenshot: any = await captureScreenShot();
       await uploadAndGetSolution(screenshot);
     });
 
-    // DELETE THESE
-    if (!isAuthenticated) {
-      window.electronAPI.resize(300, 280);
-    }
+    authenticate();
   }, []);
 
+  if (isLoading) {
+    return <CircularLoader />;
+  }
   if (!isAuthenticated) {
     return <LoginPage setIsAuthenticated={setIsAuthenticated} />;
   }

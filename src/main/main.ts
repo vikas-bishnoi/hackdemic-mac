@@ -81,8 +81,8 @@ const createWindow = async () => {
     x: 1650,
     y: 50,
 
-    width: 728,
-    height: 448,
+    width: 768,
+    height: 480,
     // skipTaskbar: true,
     frame: false, // ✅ Remove default window frame
     minimizable: false,

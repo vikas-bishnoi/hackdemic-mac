@@ -1,5 +1,12 @@
 import axios from 'axios';
 
+const getCookie = (name: string): string | null => {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop()?.split(';').shift() || null;
+  return null;
+};
+
 const baseUrl = 'http://localhost:8000/api';
 
 const apiClient = axios.create({
@@ -13,6 +20,8 @@ const apiClient = axios.create({
 // Add request interceptor to add auth token
 apiClient.interceptors.request.use(
   (config) => {
+    const value = getCookie('token');
+    console.log(value);
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -44,20 +53,6 @@ const apiFormClient = axios.create({
   },
   withCredentials: true,
 });
-
-// Add request interceptor to add auth token
-apiFormClient.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  },
-);
 
 // Add response interceptor to handle token refresh and auth errors
 apiFormClient.interceptors.response.use(

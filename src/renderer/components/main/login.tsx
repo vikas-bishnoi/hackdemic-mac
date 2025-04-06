@@ -49,9 +49,11 @@ export default function LoginPage({
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       await authApi.login(values);
+      window.electronAPI.resize(768, 480);
       setIsAuthenticated(true);
     } catch (e) {
       console.log('ERROR LOGIN');
+      setIsAuthenticated(false);
     }
   }
 
