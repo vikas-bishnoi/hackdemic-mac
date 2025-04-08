@@ -37,3 +37,16 @@
 .no-drag {
   -webkit-app-region: no-drag; /* Disable dragging for buttons */
 }
+
+.no-scrollbar {
+  -ms-overflow-style: none; /* IE & Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+.draggable {
+  -webkit-app-region: drag;
+}

@@ -106,7 +106,7 @@ export default function LoginPage({
             <Button
               type="submit"
               size="icon"
-              className="w-full no-drag cursor-pointer bg-orange-500 hover:bg-orange-600 text-white text-lg py-4 px-6 rounded-md"
+              className="w-full no-drag cursor-pointer bg-orange-500  text-white text-lg py-4 px-6 rounded-md"
             >
               Log In
             </Button>
@@ -115,8 +115,16 @@ export default function LoginPage({
       </CardContent>
       <CardFooter className="flex gap-1 justify-center items-center text-sm px-4">
         <div className="p-0 m-0">Don't have an account?</div>
-        <div className="p-0 m-0 hover:underline cursor-pointer">Sign up</div>
+        <div className="p-0 m-0  cursor-pointer">Sign up</div>
       </CardFooter>
     </Card>
   );
 }
+
+// import React from 'react';
+
+// const LoginPage = () => {
+//   return <div>LoginPage</div>;
+// };
+
+// export default LoginPage;

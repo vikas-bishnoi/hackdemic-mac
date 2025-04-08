@@ -9,6 +9,7 @@ import CircularLoader from './components/main/circular-loader';
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [solutionText, setSolutionText] = useState('');
 
   const captureScreenShot = async () => {
     const stream = await navigator.mediaDevices.getUserMedia({
@@ -55,7 +56,8 @@ export default function App() {
   const uploadAndGetSolution = async (imageData: Blob) => {
     try {
       const { data } = await interviewApi.getSolution({ image: imageData });
-      // setSolutionData('data');
+      // console.log(data);
+      setSolutionText(data);
     } catch (e) {
       console.log('error', e);
     }
@@ -90,7 +92,7 @@ export default function App() {
   }
   return (
     <div className="h-full  w-full p-4">
-      <Solution />
+      <Solution solution={solutionText} />
     </div>
   );
 }

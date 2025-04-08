@@ -6,12 +6,11 @@ import {
   ipcMain,
   globalShortcut,
   session,
+  screen,
 } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import { resolveHtmlPath } from './util';
-const tesseract = require('node-tesseract-ocr');
-const fs = require('fs');
 
 const makewindowtransparent = require('./../../build/Release/makewindowtransparent.node');
 
@@ -76,26 +75,54 @@ const createWindow = async () => {
   const getAssetPath = (...paths: string[]): string => {
     return path.join(RESOURCES_PATH, ...paths);
   };
-
+  let x = 50,
+    y = 50;
   mainWindow = new BrowserWindow({
-    x: 50,
-    y: 50,
+    x,
+    y,
 
+    // width: 70,
+    // height: 70,
     width: 768,
     height: 480,
-    // skipTaskbar: true,
+    skipTaskbar: true,
     frame: false, // ✅ Remove default window frame
     minimizable: false,
     transparent: true, // Optional: Make background transparent
     icon: getAssetPath('icon.png'),
     webPreferences: {
-      // devTools: false,
+      devTools: false,
       // offscreen: true,
       preload: app.isPackaged
         ? path.join(__dirname, 'preload.js')
         : path.join(__dirname, '../../.erb/dll/preload.js'),
     },
   });
+
+  let dx = 1; // change in x
+  let dy = 1; // change in y
+
+  const winWidth = 768;
+  const winHeight = 480;
+
+  // const interval = setInterval(() => {
+  //   const display = screen.getPrimaryDisplay();
+  //   const screenWidth = display.workArea.width;
+  //   const screenHeight = display.workArea.height;
+
+  //   // Bounce on edges
+  //   if (x + winWidth >= screenWidth || x <= 0) {
+  //     dx = -dx;
+  //   }
+  //   if (y + winHeight >= screenHeight || y <= 0) {
+  //     dy = -dy;
+  //   }
+
+  //   x += dx;
+  //   y += dy;
+
+  //   mainWindow?.setPosition(x, y);
+  // }, 10);
 
   mainWindow.setAlwaysOnTop(true, 'screen-saver');
   // mainWindow.setVisibleOnAllWorkspaces(true); // Keep it in all virtual desktops
