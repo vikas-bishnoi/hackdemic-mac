@@ -7,7 +7,8 @@ const getCookie = (name: string): string | null => {
   return null;
 };
 
-const baseUrl = 'http://localhost:8000/api';
+// const baseUrl = 'http://localhost:8000/api';
+const baseUrl = 'https://api.hackdemic.com/api';
 
 const apiClient = axios.create({
   baseURL: baseUrl,

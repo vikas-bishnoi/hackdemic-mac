@@ -11,6 +11,7 @@ import {
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import { resolveHtmlPath } from './util';
+import { ChildProcess, spawn } from 'child_process';
 
 const makewindowtransparent = require('./../../build/Release/makewindowtransparent.node');
 
@@ -34,43 +35,80 @@ class AppUpdater {
   }
 }
 
+const RESOURCES_PATH = app.isPackaged
+  ? path.join(process.resourcesPath, 'assets')
+  : path.join(__dirname, '../../assets');
+
+const resPath = app.isPackaged
+  ? path.join(process.resourcesPath)
+  : path.join(process.cwd(), 'src', 'resources');
+
 let ctrlPressed = false;
 let mainWindow: BrowserWindow | null = null;
+let ctrlTracker: ChildProcess | null = null;
+
+// FUNCTIONS
+const initializeCtrlTracker = () => {
+  const ctrlTrackerPath = path.join(RESOURCES_PATH, 'windows/listner'); // .exe on Windows
+  const ctrlTracker = spawn(ctrlTrackerPath);
+
+  ctrlTracker.stdout.on('data', (data) => {
+    const msg = data.toString().trim();
+    if (msg === 'ctrl-down' && !ctrlPressed) {
+      ctrlPressed = true;
+    } else if (msg === 'ctrl-up') {
+      ctrlPressed = false;
+    }
+  });
+  ctrlTracker.on('exit', (code) => {
+    console.log('ctrl-listener exited with code', code);
+  });
+};
+
 const trackCursorPosition = async () => {
   const interval = setInterval(() => {
+    console.log('ctrlPressed', ctrlPressed);
     if (!mainWindow) return;
-    if (!ctrlPressed) return;
+    if (ctrlPressed) return;
 
     const { x, y } = screen.getCursorScreenPoint();
+    const {
+      x: winX,
+      y: winY,
+      width: winW,
+      height: winH,
+    } = mainWindow.getBounds();
+
+    // 💡 Check if the cursor is inside the window
+    const isCursorInside =
+      x >= winX && x <= winX + winW && y >= winY && y <= winY + winH;
+
+    if (!isCursorInside) return; // ✅ Don't move if cursor is not hovering on the window
 
     const display = screen.getDisplayNearestPoint({ x, y });
+    const screenBounds = display.workArea;
 
-    const screenBounds = display.workArea; // use workArea to avoid taskbar overlap
-
-    const [winW, winH] = mainWindow.getSize();
-
-    // Try to move the window in a direction that avoids the cursor
-    let newX = mainWindow?.getBounds().x;
-    let newY = mainWindow?.getBounds().y;
+    let newX = winX;
+    let newY = winY;
 
     const spaceAbove = y - screenBounds.y;
-    const spaceBelow = screenBounds.y + screenBounds.height - y;
+    const spaceBelow = screenBounds.y + screenBounds.height - (y + winH);
     const spaceLeft = x - screenBounds.x;
-    const spaceRight = screenBounds.x + screenBounds.width - x;
+    const spaceRight = screenBounds.x + screenBounds.width - (x + winW);
 
-    if (spaceBelow >= winH) {
-      newY = y + 30; // move below cursor with padding
-    } else if (spaceAbove >= winH) {
-      newY = y - winH - 30; // move above cursor
+    if (spaceBelow >= winH + 10) {
+      newY = y + 10;
+    } else if (spaceAbove >= winH + 10) {
+      newY = y - winH - 10;
     }
 
-    if (spaceRight >= winW) {
-      newX = x + 30; // move to the right
-    } else if (spaceLeft >= winW) {
-      newX = x - winW - 30; // move to the left
+    if (spaceRight >= winW + 10) {
+      newX = x + 10;
+    } else if (spaceLeft >= winW + 10) {
+      newX = x - winW - 10;
     }
 
-    // Keep window within screen bounds
+    // Clamp window within screen bounds
     newX = Math.max(
       screenBounds.x,
       Math.min(newX, screenBounds.x + screenBounds.width - winW),
@@ -80,15 +118,15 @@ const trackCursorPosition = async () => {
       Math.min(newY, screenBounds.y + screenBounds.height - winH),
     );
 
-    mainWindow?.setBounds({ x: newX, y: newY, width: winW, height: winH });
-  }, 1000);
+    // 🧠 Only move if position has changed
+    if (newX !== winX || newY !== winY) {
+      mainWindow.setPosition(newX, newY);
+      // mainWindow.setBounds({ x: , y: , width: winW, height: winH });
+    }
+  }, 10);
 };
 
 const createWindow = async () => {
-  const RESOURCES_PATH = app.isPackaged
-    ? path.join(process.resourcesPath, 'assets')
-    : path.join(__dirname, '../../assets');
-
   const getAssetPath = (...paths: string[]): string => {
     return path.join(RESOURCES_PATH, ...paths);
   };
@@ -110,6 +148,7 @@ const createWindow = async () => {
     webPreferences: {
       devTools: false,
       // offscreen: true,
+      webSecurity: !isDebug,
       preload: app.isPackaged
         ? path.join(__dirname, 'preload.js')
         : path.join(__dirname, '../../.erb/dll/preload.js'),
@@ -121,7 +160,7 @@ const createWindow = async () => {
   });
 
   mainWindow.setAlwaysOnTop(true, 'screen-saver');
-  // mainWindow.setVisibleOnAllWorkspaces(true); // Keep it in all virtual desktops
+  mainWindow.setVisibleOnAllWorkspaces(true); // Keep it in all virtual desktops
 
   mainWindow.loadURL(resolveHtmlPath('index.html'));
 
@@ -151,7 +190,9 @@ const createWindow = async () => {
   // eslint-disable-next-line
   new AppUpdater();
 };
+// -FUNCTIONS
 
+// CONFIGURATION
 app.disableHardwareAcceleration();
 
 app.on('window-all-closed', () => {
@@ -162,9 +203,16 @@ app.on('window-all-closed', () => {
   }
 });
 
+app.on('before-quit', () => {
+  if (ctrlTracker) {
+    ctrlTracker?.kill();
+  }
+});
+
 app.on('will-quit', () => {
   globalShortcut.unregisterAll();
 });
+// -CONFIGURATION
 
 app
   .whenReady()
@@ -193,7 +241,8 @@ app
     });
 
     createWindow();
-    trackCursorPosition();
+    initializeCtrlTracker();
+    // trackCursorPosition();
     app.on('activate', () => {
       // On macOS it's common to re-create a window in the app when the
       // dock icon is clicked and there are no other windows open.
