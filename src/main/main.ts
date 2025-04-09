@@ -14,6 +14,18 @@ import { resolveHtmlPath } from './util';
 
 const makewindowtransparent = require('./../../build/Release/makewindowtransparent.node');
 
+const isDebug =
+  process.env.NODE_ENV === 'development' || process.env.DEBUG_PROD === 'true';
+
+if (isDebug) {
+  require('electron-debug').default();
+}
+
+if (process.env.NODE_ENV === 'production') {
+  const sourceMapSupport = require('source-map-support');
+  sourceMapSupport.install();
+}
+
 class AppUpdater {
   constructor() {
     log.transports.file.level = 'info';
@@ -22,52 +34,57 @@ class AppUpdater {
   }
 }
 
-const appPath = app.isPackaged
-  ? path.join(process.resourcesPath)
-  : path.join(process.cwd(), 'src', 'resources');
-
-const binaryPath = path.join(
-  appPath,
-  'assets',
-  'windows',
-  'tesseract',
-  'tesseract.exe',
-);
-const dataPath = path.join(
-  appPath,
-  'assets',
-  'windows',
-  'tesseract',
-  'tessdata',
-);
-
+let ctrlPressed = false;
 let mainWindow: BrowserWindow | null = null;
+const trackCursorPosition = async () => {
+  const interval = setInterval(() => {
+    if (!mainWindow) return;
+    if (!ctrlPressed) return;
 
-const config = {
-  lang: 'eng',
-  oem: 1,
-  psm: 6,
-  binary: binaryPath,
-  config: [`--tessdata-dir`, dataPath],
+    const { x, y } = screen.getCursorScreenPoint();
+
+    const display = screen.getDisplayNearestPoint({ x, y });
+
+    const screenBounds = display.workArea; // use workArea to avoid taskbar overlap
+
+    const [winW, winH] = mainWindow.getSize();
+
+    // Try to move the window in a direction that avoids the cursor
+    let newX = mainWindow?.getBounds().x;
+    let newY = mainWindow?.getBounds().y;
+
+    const spaceAbove = y - screenBounds.y;
+    const spaceBelow = screenBounds.y + screenBounds.height - y;
+    const spaceLeft = x - screenBounds.x;
+    const spaceRight = screenBounds.x + screenBounds.width - x;
+
+    if (spaceBelow >= winH) {
+      newY = y + 30; // move below cursor with padding
+    } else if (spaceAbove >= winH) {
+      newY = y - winH - 30; // move above cursor
+    }
+
+    if (spaceRight >= winW) {
+      newX = x + 30; // move to the right
+    } else if (spaceLeft >= winW) {
+      newX = x - winW - 30; // move to the left
+    }
+
+    // Keep window within screen bounds
+    newX = Math.max(
+      screenBounds.x,
+      Math.min(newX, screenBounds.x + screenBounds.width - winW),
+    );
+    newY = Math.max(
+      screenBounds.y,
+      Math.min(newY, screenBounds.y + screenBounds.height - winH),
+    );
+
+    mainWindow?.setBounds({ x: newX, y: newY, width: winW, height: winH });
+  }, 1000);
 };
 
-if (process.env.NODE_ENV === 'production') {
-  const sourceMapSupport = require('source-map-support');
-  sourceMapSupport.install();
-}
-
-const isDebug =
-  process.env.NODE_ENV === 'development' || process.env.DEBUG_PROD === 'true';
-
-if (isDebug) {
-  require('electron-debug').default();
-}
-
 const createWindow = async () => {
-  // if (isDebug) {
-  //   await installExtensions();
-  // }
-
   const RESOURCES_PATH = app.isPackaged
     ? path.join(process.resourcesPath, 'assets')
     : path.join(__dirname, '../../assets');
@@ -99,30 +116,9 @@ const createWindow = async () => {
     },
   });
 
-  let dx = 1; // change in x
-  let dy = 1; // change in y
-
-  const winWidth = 768;
-  const winHeight = 480;
-
-  // const interval = setInterval(() => {
-  //   const display = screen.getPrimaryDisplay();
-  //   const screenWidth = display.workArea.width;
-  //   const screenHeight = display.workArea.height;
-
-  //   // Bounce on edges
-  //   if (x + winWidth >= screenWidth || x <= 0) {
-  //     dx = -dx;
-  //   }
-  //   if (y + winHeight >= screenHeight || y <= 0) {
-  //     dy = -dy;
-  //   }
-
-  //   x += dx;
-  //   y += dy;
-
-  //   mainWindow?.setPosition(x, y);
-  // }, 10);
+  mainWindow.on('closed', () => {
+    mainWindow = null;
+  });
 
   mainWindow.setAlwaysOnTop(true, 'screen-saver');
   // mainWindow.setVisibleOnAllWorkspaces(true); // Keep it in all virtual desktops
@@ -133,7 +129,6 @@ const createWindow = async () => {
     const hwndBuffer = mainWindow?.getNativeWindowHandle();
     const hwnd = hwndBuffer?.readBigUInt64LE();
 
-    console.log('mainWindow', hwnd);
     makewindowtransparent.setAffinity(hwnd);
 
     if (!mainWindow) {
@@ -158,6 +153,19 @@ const createWindow = async () => {
 };
 
 app.disableHardwareAcceleration();
+
+app.on('window-all-closed', () => {
+  // Respect the OSX convention of having the application in memory even
+  // after all windows have been closed
+  if (process.platform !== 'darwin') {
+    app.quit();
+  }
+});
+
+app.on('will-quit', () => {
+  globalShortcut.unregisterAll();
+});
+
 app
   .whenReady()
   .then(() => {
@@ -183,37 +191,17 @@ app
     globalShortcut.register('Alt+X', () => {
       if (mainWindow) mainWindow.webContents.send('capture-screenshot');
     });
+
     createWindow();
+    trackCursorPosition();
     app.on('activate', () => {
       // On macOS it's common to re-create a window in the app when the
       // dock icon is clicked and there are no other windows open.
       if (mainWindow === null) createWindow();
     });
-    ipcMain.on('save-screenshot', (event, dataUrl) => {
-      const base64 = dataUrl.replace(/^data:image\/png;base64,/, '');
-      const buffer = Buffer.from(base64, 'base64');
-      const picturesPath = app.getPath('pictures'); // or use 'documents', 'desktop', etc.
-      const fileName = `dsa-question-${Date.now()}.png`;
-      const fullPath = path.join(picturesPath, fileName);
-    });
 
     ipcMain.on('resize', (event, dimensions) => {
-      console.log(dimensions);
-      // mainWindow?.setSize(dimensions.width, dimensions.height);
       mainWindow?.setSize(dimensions.width, dimensions.height);
-      console.log(dimensions);
     });
   })
   .catch(console.log);
-
-/**
- * Add event listeners...
- */
-
-app.on('window-all-closed', () => {
-  // Respect the OSX convention of having the application in memory even
-  // after all windows have been closed
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
-});
