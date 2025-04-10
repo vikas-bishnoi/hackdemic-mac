@@ -19,6 +19,8 @@ const electronHandler = {
 
   saveScreenshot: (screenshot: any) =>
     ipcRenderer.send('save-screenshot', screenshot),
+
+  openLink: (url: string) => ipcRenderer.send('open-link', url),
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronHandler);

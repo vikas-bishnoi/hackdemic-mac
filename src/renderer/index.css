@@ -32,6 +32,10 @@
     text-align: center;
     background-color: transparent;
   }
+  *:hover {
+    text-decoration: aliceblue;
+    color: black;
+  }
 }
 
 .no-drag {

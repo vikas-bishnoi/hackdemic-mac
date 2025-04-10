@@ -21,16 +21,12 @@ import {
   FormLabel,
   FormMessage,
 } from '../ui/form';
-// import Logo from '../default/logo';
+import Logo from '../default/logo';
 import { authApi } from '../../api/authApi';
 
 const formSchema = z.object({
-  email: z.string().email({
-    message: 'Please enter a valid email address.',
-  }),
-  password: z.string().min(6, {
-    message: 'Password must be at least 6 characters.',
-  }),
+  email: z.string(),
+  password: z.string(),
 });
 
 export default function LoginPage({
@@ -58,11 +54,10 @@ export default function LoginPage({
   }
 
   return (
-    <Card className="w-full border-none bg-white gap-3">
+    <Card className="w-full border-none bg-white gap-3 py-[14px]">
       <CardHeader className="w-full flex items-center px-4">
-        <CardTitle>
-          {/* <Logo /> */}
-          hehe
+        <CardTitle className="items-center justify-center w-full">
+          <Logo />
         </CardTitle>
       </CardHeader>
       <CardContent className="w-full px-4">
@@ -115,7 +110,14 @@ export default function LoginPage({
       </CardContent>
       <CardFooter className="flex gap-1 justify-center items-center text-sm px-4">
         <div className="p-0 m-0">Don't have an account?</div>
-        <div className="p-0 m-0  cursor-pointer">Sign up</div>
+        <div
+          className="p-0 m-0 cursor-pointer no-drag hover:!text-orange-500"
+          onClick={() =>
+            window.electronAPI.openLink('https://hackdemic.com/signup')
+          }
+        >
+          Sign up
+        </div>
       </CardFooter>
     </Card>
   );

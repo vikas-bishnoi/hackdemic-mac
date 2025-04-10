@@ -39,10 +39,7 @@ const RESOURCES_PATH = app.isPackaged
   ? path.join(process.resourcesPath, 'assets')
   : path.join(__dirname, '../../assets');
 
-const resPath = app.isPackaged
-  ? path.join(process.resourcesPath)
-  : path.join(process.cwd(), 'src', 'resources');
-
+let clickable = false;
 let ctrlPressed = false;
 let mainWindow: BrowserWindow | null = null;
 let ctrlTracker: ChildProcess | null = null;
@@ -135,9 +132,6 @@ const createWindow = async () => {
   mainWindow = new BrowserWindow({
     x,
     y,
-
-    // width: 70,
-    // height: 70,
     width: 768,
     height: 480,
     skipTaskbar: true,
@@ -146,7 +140,7 @@ const createWindow = async () => {
     transparent: true, // Optional: Make background transparent
     icon: getAssetPath('icon.png'),
     webPreferences: {
-      devTools: false,
+      // devTools: false,
       // offscreen: true,
       webSecurity: !isDebug,
       preload: app.isPackaged
@@ -163,7 +157,7 @@ const createWindow = async () => {
   mainWindow.setVisibleOnAllWorkspaces(true); // Keep it in all virtual desktops
 
   mainWindow.loadURL(resolveHtmlPath('index.html'));
-
+  mainWindow.webContents.openDevTools();
   mainWindow.on('ready-to-show', () => {
     const hwndBuffer = mainWindow?.getNativeWindowHandle();
     const hwnd = hwndBuffer?.readBigUInt64LE();
@@ -239,6 +233,24 @@ app
     globalShortcut.register('Alt+X', () => {
       if (mainWindow) mainWindow.webContents.send('capture-screenshot');
     });
+    globalShortcut.register('Alt+A', () => {
+      if (!mainWindow) return;
+      if (mainWindow.isVisible()) {
+        mainWindow.hide();
+      } else {
+        mainWindow.show();
+      }
+    });
+    globalShortcut.register('Alt+C', () => {
+      if (!mainWindow) return;
+      if (clickable) {
+        mainWindow.setIgnoreMouseEvents(false);
+        clickable = false;
+      } else {
+        mainWindow.setIgnoreMouseEvents(true);
+        clickable = true;
+      }
+    });
 
     createWindow();
     initializeCtrlTracker();
@@ -251,6 +263,9 @@ app
 
     ipcMain.on('resize', (event, dimensions) => {
       mainWindow?.setSize(dimensions.width, dimensions.height);
+    });
+    ipcMain.on('open-link', (event, url) => {
+      shell.openExternal(url);
     });
   })
   .catch(console.log);
