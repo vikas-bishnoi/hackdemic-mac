@@ -13,7 +13,7 @@ import log from 'electron-log';
 import { resolveHtmlPath } from './util';
 import { ChildProcess, spawn } from 'child_process';
 
-const makewindowtransparent = require('./../../build/Release/makewindowtransparent.node');
+const makewindowtransparent = require('./../../assets/windows/makewindowtransparent.node');
 
 const isDebug =
   process.env.NODE_ENV === 'development' || process.env.DEBUG_PROD === 'true';
@@ -134,7 +134,7 @@ const createWindow = async () => {
     y,
     width: 768,
     height: 480,
-    skipTaskbar: true,
+    // skipTaskbar: true,
     frame: false, // ✅ Remove default window frame
     minimizable: false,
     transparent: true, // Optional: Make background transparent
@@ -142,7 +142,7 @@ const createWindow = async () => {
     webPreferences: {
       // devTools: false,
       // offscreen: true,
-      webSecurity: !isDebug,
+      webSecurity: true,
       preload: app.isPackaged
         ? path.join(__dirname, 'preload.js')
         : path.join(__dirname, '../../.erb/dll/preload.js'),
@@ -154,14 +154,11 @@ const createWindow = async () => {
   });
 
   mainWindow.setAlwaysOnTop(true, 'screen-saver');
-  mainWindow.setVisibleOnAllWorkspaces(true); // Keep it in all virtual desktops
-
   mainWindow.loadURL(resolveHtmlPath('index.html'));
-  mainWindow.webContents.openDevTools();
+
   mainWindow.on('ready-to-show', () => {
     const hwndBuffer = mainWindow?.getNativeWindowHandle();
     const hwnd = hwndBuffer?.readBigUInt64LE();
-
     makewindowtransparent.setAffinity(hwnd);
 
     if (!mainWindow) {
@@ -233,24 +230,24 @@ app
     globalShortcut.register('Alt+X', () => {
       if (mainWindow) mainWindow.webContents.send('capture-screenshot');
     });
-    globalShortcut.register('Alt+A', () => {
-      if (!mainWindow) return;
-      if (mainWindow.isVisible()) {
-        mainWindow.hide();
-      } else {
-        mainWindow.show();
-      }
-    });
-    globalShortcut.register('Alt+C', () => {
-      if (!mainWindow) return;
-      if (clickable) {
-        mainWindow.setIgnoreMouseEvents(false);
-        clickable = false;
-      } else {
-        mainWindow.setIgnoreMouseEvents(true);
-        clickable = true;
-      }
-    });
+    // globalShortcut.register('Alt+A', () => {
+    //   if (!mainWindow) return;
+    //   if (mainWindow.isVisible()) {
+    //     mainWindow.hide();
+    //   } else {
+    //     mainWindow.show();
+    //   }
+    // });
+    // globalShortcut.register('Alt+C', () => {
+    //   if (!mainWindow) return;
+    //   if (clickable) {
+    //     mainWindow.setIgnoreMouseEvents(false);
+    //     clickable = false;
+    //   } else {
+    //     mainWindow.setIgnoreMouseEvents(true);
+    //     clickable = true;
+    //   }
+    // });
 
     createWindow();
     initializeCtrlTracker();
