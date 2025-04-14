@@ -42,7 +42,7 @@ const RESOURCES_PATH = app.isPackaged
 let clickable = false;
 let ctrlPressed = false;
 let mainWindow: BrowserWindow | null = null;
-let ctrlTracker: ChildProcess | null = null;
+let ctrlTracker: ChildProcess | any = null;
 
 // FUNCTIONS
 const initializeCtrlTracker = () => {
@@ -124,6 +124,7 @@ const trackCursorPosition = async () => {
 };
 
 const createWindow = async () => {
+  if (mainWindow) return;
   const getAssetPath = (...paths: string[]): string => {
     return path.join(RESOURCES_PATH, ...paths);
   };
@@ -134,7 +135,8 @@ const createWindow = async () => {
     y,
     width: 768,
     height: 480,
-    // skipTaskbar: true,
+    skipTaskbar: true,
+    // resizable: false,
     frame: false, // ✅ Remove default window frame
     minimizable: false,
     transparent: true, // Optional: Make background transparent
@@ -155,7 +157,6 @@ const createWindow = async () => {
 
   mainWindow.setAlwaysOnTop(true, 'screen-saver');
   mainWindow.loadURL(resolveHtmlPath('index.html'));
-
   mainWindow.on('ready-to-show', () => {
     const hwndBuffer = mainWindow?.getNativeWindowHandle();
     const hwnd = hwndBuffer?.readBigUInt64LE();
@@ -164,6 +165,7 @@ const createWindow = async () => {
     if (!mainWindow) {
       throw new Error('"mainWindow" is not defined');
     }
+    mainWindow.webContents.openDevTools();
     mainWindow.show();
   });
 
@@ -187,8 +189,6 @@ const createWindow = async () => {
 app.disableHardwareAcceleration();
 
 app.on('window-all-closed', () => {
-  // Respect the OSX convention of having the application in memory even
-  // after all windows have been closed
   if (process.platform !== 'darwin') {
     app.quit();
   }
@@ -205,64 +205,74 @@ app.on('will-quit', () => {
 });
 // -CONFIGURATION
 
-app
-  .whenReady()
-  .then(() => {
-    session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
-      // eslint-disable-next-line promise/no-callback-in-promise
-      callback({
-        responseHeaders: {
-          ...details.responseHeaders,
-          'Content-Security-Policy': [
-            "default-src 'self'; " +
-              "connect-src 'self' blob: http://localhost:8000 https://devapi.hackdemic.com wss://devapi.hackdemic.com wss://api.hackdemic.com ws://localhost:8000 https://mazic-prod-assets.s3-accelerate.amazonaws.com https://api.hackdemic.com https://mazic-dev-assets.s3.eu-west-2.amazonaws.com; " +
-              "script-src 'self' 'unsafe-eval'; " +
-              "style-src 'self' 'unsafe-inline'; " +
-              "font-src 'self' data:; " +
-              "frame-src 'self'; " +
-              "img-src 'self' data:;" +
-              "media-src 'self' blob:;",
-          ],
-        },
-      });
-    });
+app.on('before-quit', () => {
+  console.log('App is quitting...');
+});
 
-    globalShortcut.register('Alt+X', () => {
-      if (mainWindow) mainWindow.webContents.send('capture-screenshot');
+app.whenReady().then(() => {
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    // eslint-disable-next-line promise/no-callback-in-promise
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [
+          "default-src 'self'; " +
+            "connect-src 'self' blob: http://localhost:8000 https://devapi.hackdemic.com wss://devapi.hackdemic.com wss://api.hackdemic.com ws://localhost:8000 https://mazic-prod-assets.s3-accelerate.amazonaws.com https://api.hackdemic.com https://mazic-dev-assets.s3.eu-west-2.amazonaws.com; " +
+            "script-src 'self' 'unsafe-eval'; " +
+            "style-src 'self' 'unsafe-inline'; " +
+            "font-src 'self' data:; " +
+            "frame-src 'self'; " +
+            "img-src 'self' data:;" +
+            "media-src 'self' blob:;",
+        ],
+      },
     });
-    // globalShortcut.register('Alt+A', () => {
-    //   if (!mainWindow) return;
-    //   if (mainWindow.isVisible()) {
-    //     mainWindow.hide();
-    //   } else {
-    //     mainWindow.show();
-    //   }
-    // });
-    // globalShortcut.register('Alt+C', () => {
-    //   if (!mainWindow) return;
-    //   if (clickable) {
-    //     mainWindow.setIgnoreMouseEvents(false);
-    //     clickable = false;
-    //   } else {
-    //     mainWindow.setIgnoreMouseEvents(true);
-    //     clickable = true;
-    //   }
-    // });
+  });
 
-    createWindow();
-    initializeCtrlTracker();
-    // trackCursorPosition();
-    app.on('activate', () => {
-      // On macOS it's common to re-create a window in the app when the
-      // dock icon is clicked and there are no other windows open.
-      if (mainWindow === null) createWindow();
-    });
+  globalShortcut.register('Alt+S', () => {
+    if (mainWindow) mainWindow.webContents.send('capture-screenshot');
+  });
 
-    ipcMain.on('resize', (event, dimensions) => {
-      mainWindow?.setSize(dimensions.width, dimensions.height);
-    });
-    ipcMain.on('open-link', (event, url) => {
-      shell.openExternal(url);
-    });
-  })
-  .catch(console.log);
+  globalShortcut.register('Alt+A', () => {
+    if (!mainWindow) return;
+    if (mainWindow.isVisible()) {
+      mainWindow.hide();
+    } else {
+      mainWindow.show();
+    }
+  });
+
+  globalShortcut.register('Alt+C', () => {
+    if (!mainWindow) return;
+    if (clickable) {
+      mainWindow.setIgnoreMouseEvents(false);
+      clickable = false;
+    } else {
+      mainWindow.setIgnoreMouseEvents(true);
+      clickable = true;
+    }
+  });
+
+  createWindow();
+  initializeCtrlTracker();
+  // trackCursorPosition();
+  app.on('activate', () => {
+    // On macOS it's common to re-create a window in the app when the
+    // dock icon is clicked and there are no other windows open.
+    if (!mainWindow) createWindow();
+  });
+
+  ipcMain.on('resize', (event, dimensions) => {
+    mainWindow?.setSize(dimensions.width, dimensions.height);
+  });
+  ipcMain.on('open-link', (event, url) => {
+    shell.openExternal(url);
+  });
+  ipcMain.on('move-window', (event, { dx, dy }) => {
+    const win = BrowserWindow.getFocusedWindow();
+    if (!win) return;
+
+    const { x, y } = win.getBounds();
+    win.setPosition(x + dx, y + dy);
+  });
+});

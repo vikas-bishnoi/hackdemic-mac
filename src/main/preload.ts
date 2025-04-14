@@ -17,6 +17,9 @@ const electronHandler = {
   resize: (width: number, height: number) =>
     ipcRenderer.send('resize', { width, height }),
 
+  moveWindow: (newPosition: any) =>
+    ipcRenderer.send('move-window', newPosition),
+
   saveScreenshot: (screenshot: any) =>
     ipcRenderer.send('save-screenshot', screenshot),
 

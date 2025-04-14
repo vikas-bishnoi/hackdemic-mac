@@ -1,25 +1,15 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { cn } from '../../lib/utils';
 
 const Solution = ({ solution }: { solution: string }) => {
-  const rootRef = useRef(null);
-
-  const handleMouseDown = () => {
-    rootRef.current?.classList.remove('no-drag');
-  };
-
-  const handleMouseUp = () => {
-    rootRef.current?.classList.add('no-drag');
-  };
-
   return (
     <div
-      className="text-white w-full h-full text-start no-scrollbar"
-      ref={rootRef}
-      onMouseDown={handleMouseDown}
-      onMouseUp={handleMouseUp}
+      className={cn(
+        'text-yellow-300 w-full h-full  text-start no-scrollbar hover:no-underline ',
+      )}
     >
-      <pre className="content select-none text-sm max-h-full overflow-y-auto whitespace-pre-wrap break-words no-scrollbar no-drag rounded-lg p-4 hover:no-underline">
-        <code onMouseDown={handleMouseDown} onMouseUp={handleMouseUp}>
+      <pre className="content select-none text-sm max-h-full overflow-y-auto whitespace-pre-wrap break-words no-scrollbar rounded-lg p-4 hover:no-underline">
+        <code className="hover:no-underline hover:text-yellow-300">
           {solution}
         </code>
       </pre>
