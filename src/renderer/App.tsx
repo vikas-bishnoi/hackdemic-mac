@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import Solution from './components/main/solution';
-import { interviewApi } from './api/interviewApi';
+import { screenshotApi } from './api/screenshotApi';
 import { base64ToBlob } from './lib/helpers/base64toBlob';
 import LoginPage from './components/main/login';
 import { authApi } from './api/authApi';
@@ -55,7 +55,7 @@ export default function App() {
 
   const uploadAndGetSolution = async (imageData: Blob) => {
     try {
-      const { data } = await interviewApi.getSolution({ image: imageData });
+      const { data } = await screenshotApi.getSolution({ image: imageData });
       // console.log(data);
       setSolutionText(data);
     } catch (e) {

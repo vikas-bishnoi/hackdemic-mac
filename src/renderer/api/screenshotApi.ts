@@ -12,16 +12,12 @@ export interface ImageType {
   image: Blob | File;
 }
 
-export const interviewApi = {
+export const screenshotApi = {
   getSolution: async (formData: ImageType) => {
     const response = await apiFormClient.post(
-      '/interview/generate-solution',
+      '/screenshot/generate-solution',
       formData,
     );
-    return response.data;
-  },
-  logout: async () => {
-    const response = await apiClient.post('/auth/logout');
     return response.data;
   },
 };
