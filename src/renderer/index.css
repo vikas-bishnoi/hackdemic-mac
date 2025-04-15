@@ -15,7 +15,7 @@
   ::backdrop,
   ::file-selector-button {
     border-color: var(--color-gray-200, currentColor);
-    border: none;
+    outline: none !important;
     text-decoration: none !important;
   }
   html,
