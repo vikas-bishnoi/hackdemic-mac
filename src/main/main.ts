@@ -142,7 +142,7 @@ const createWindow = async () => {
     transparent: true, // Optional: Make background transparent
     icon: getAssetPath('icon.png'),
     webPreferences: {
-      // devTools: false,
+      devTools: false,
       // offscreen: true,
       webSecurity: true,
       preload: app.isPackaged
@@ -235,23 +235,26 @@ app.whenReady().then(() => {
 
   globalShortcut.register('Alt+A', () => {
     if (!mainWindow) return;
-    if (mainWindow.isVisible()) {
-      mainWindow.hide();
+    if (mainWindow.isMinimized()) {
+      mainWindow.restore();
+      const hwndBuffer = mainWindow?.getNativeWindowHandle();
+      const hwnd = hwndBuffer?.readBigUInt64LE();
+      makewindowtransparent.setAffinity(hwnd);
     } else {
-      mainWindow.show();
+      mainWindow.minimize();
     }
   });
 
-  globalShortcut.register('Alt+C', () => {
-    if (!mainWindow) return;
-    if (clickable) {
-      mainWindow.setIgnoreMouseEvents(false);
-      clickable = false;
-    } else {
-      mainWindow.setIgnoreMouseEvents(true);
-      clickable = true;
-    }
-  });
+  // globalShortcut.register('Alt+C', () => {
+  //   if (!mainWindow) return;
+  //   if (clickable) {
+  //     mainWindow.setIgnoreMouseEvents(false);
+  //     clickable = false;
+  //   } else {
+  //     mainWindow.setIgnoreMouseEvents(true);
+  //     clickable = true;
+  //   }
+  // });
 
   createWindow();
   initializeCtrlTracker();
