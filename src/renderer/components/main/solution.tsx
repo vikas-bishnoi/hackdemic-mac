@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { cn } from '../../lib/utils';
 
-const Solution = ({ solution }: { solution: string }) => {
+function Solution({ solution }: { solution: string }) {
   return (
     <div
       className={cn(
@@ -15,6 +15,6 @@ const Solution = ({ solution }: { solution: string }) => {
       </pre>
     </div>
   );
-};
+}
 
 export default Solution;

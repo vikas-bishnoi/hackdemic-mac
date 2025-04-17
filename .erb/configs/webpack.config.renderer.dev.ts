@@ -32,7 +32,7 @@ if (
 ) {
   console.log(
     chalk.black.bgYellow.bold(
-      'The DLL files are missing. Sit back while we build them for you with "npm run build:dll"',
+      'The DLL files are missing. Sit back while we build them for you with "npm run build-dll"',
     ),
   );
   execSync('npm run postinstall');
@@ -59,7 +59,9 @@ const configuration: webpack.Configuration = {
       type: 'umd',
     },
   },
-
+  experiments: {
+    asyncWebAssembly: true,
+  },
   module: {
     rules: [
       {
@@ -74,17 +76,7 @@ const configuration: webpack.Configuration = {
               importLoaders: 1,
             },
           },
-          {
-            loader: 'postcss-loader',
-            options: {
-              postcssOptions: {
-                plugins: [
-                  require('@tailwindcss/postcss'), // Use the main Tailwind CSS package
-                  require('autoprefixer'), // Autoprefixer for browser compatibility
-                ],
-              },
-            },
-          },
+          'sass-loader',
           'postcss-loader',
         ],
         include: /\.module\.s?(c|a)ss$/,
@@ -135,7 +127,6 @@ const configuration: webpack.Configuration = {
             sourceType: 'var',
           }),
         ]),
-
     new webpack.NoEmitOnErrorsPlugin(),
 
     /**

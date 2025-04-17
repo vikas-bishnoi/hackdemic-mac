@@ -4,7 +4,7 @@ export function base64ToBlob(dataURL: any) {
   const binary = atob(parts[1]);
   const array = [];
 
-  for (let i = 0; i < binary.length; i++) {
+  for (let i = 0; i < binary.length; i += 1) {
     array.push(binary.charCodeAt(i));
   }
 

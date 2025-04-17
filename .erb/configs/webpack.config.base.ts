@@ -4,8 +4,8 @@
 
 import webpack from 'webpack';
 import TsconfigPathsPlugins from 'tsconfig-paths-webpack-plugin';
-import webpackPaths from './webpack.paths';
 import { dependencies as externals } from '../../release/app/package.json';
+import webpackPaths from './webpack.paths';
 
 const configuration: webpack.Configuration = {
   externals: [...Object.keys(externals || {})],
@@ -33,6 +33,10 @@ const configuration: webpack.Configuration = {
         test: /\.node$/,
         use: 'node-loader',
       },
+      {
+        test: /\.wasm$/,
+        type: 'webassembly/async',
+      },
     ],
   },
 
@@ -46,7 +50,7 @@ const configuration: webpack.Configuration = {
    * Determine the array of extensions that should be used to resolve modules.
    */
   resolve: {
-    extensions: ['.js', '.jsx', '.json', '.ts', '.tsx'],
+    extensions: ['.js', '.jsx', '.json', '.ts', '.tsx', '.wasm'],
     modules: [webpackPaths.srcPath, 'node_modules'],
     // There is no need to add aliases here, the paths in tsconfig get mirrored
     plugins: [new TsconfigPathsPlugins()],

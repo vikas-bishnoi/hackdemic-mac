@@ -10,10 +10,10 @@ import {
 } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
-import { resolveHtmlPath } from './util';
 import { ChildProcess, spawn } from 'child_process';
+import { resolveHtmlPath } from './util';
 
-const makewindowtransparent = require('./../../assets/windows/makewindowtransparent.node');
+const makewindowtransparent = require('../../assets/windows/makewindowtransparent.node');
 
 const isDebug =
   process.env.NODE_ENV === 'development' || process.env.DEBUG_PROD === 'true';
@@ -39,10 +39,10 @@ const RESOURCES_PATH = app.isPackaged
   ? path.join(process.resourcesPath, 'assets')
   : path.join(__dirname, '../../assets');
 
-let clickable = false;
+const clickable = false;
 let ctrlPressed = false;
 let mainWindow: BrowserWindow | null = null;
-let ctrlTracker: ChildProcess | any = null;
+const ctrlTracker: ChildProcess | any = null;
 
 // FUNCTIONS
 const initializeCtrlTracker = () => {
@@ -128,8 +128,8 @@ const createWindow = async () => {
   const getAssetPath = (...paths: string[]): string => {
     return path.join(RESOURCES_PATH, ...paths);
   };
-  let x = 50,
-    y = 50;
+  const x = 50;
+  const y = 50;
   mainWindow = new BrowserWindow({
     x,
     y,
