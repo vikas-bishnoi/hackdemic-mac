@@ -13,7 +13,7 @@ import log from 'electron-log';
 import { ChildProcess, spawn } from 'child_process';
 import { resolveHtmlPath } from './util';
 
-const makewindowtransparent = require('../../assets/windows/makewindowtransparent.node');
+// const makewindowtransparent = require('../../assets/windows/makewindowtransparent.node');
 
 const isDebug =
   process.env.NODE_ENV === 'development' || process.env.DEBUG_PROD === 'true';
@@ -39,89 +39,10 @@ const RESOURCES_PATH = app.isPackaged
   ? path.join(process.resourcesPath, 'assets')
   : path.join(__dirname, '../../assets');
 
-const clickable = false;
-let ctrlPressed = false;
+let clickable = false;
 let mainWindow: BrowserWindow | null = null;
-const ctrlTracker: ChildProcess | any = null;
 
 // FUNCTIONS
-const initializeCtrlTracker = () => {
-  const ctrlTrackerPath = path.join(RESOURCES_PATH, 'windows/listner'); // .exe on Windows
-  const ctrlTracker = spawn(ctrlTrackerPath);
-
-  ctrlTracker.stdout.on('data', (data) => {
-    const msg = data.toString().trim();
-    if (msg === 'ctrl-down' && !ctrlPressed) {
-      ctrlPressed = true;
-    } else if (msg === 'ctrl-up') {
-      ctrlPressed = false;
-    }
-  });
-  ctrlTracker.on('exit', (code) => {
-    console.log('ctrl-listener exited with code', code);
-  });
-};
-
-const trackCursorPosition = async () => {
-  const interval = setInterval(() => {
-    console.log('ctrlPressed', ctrlPressed);
-    if (!mainWindow) return;
-    if (ctrlPressed) return;
-
-    const { x, y } = screen.getCursorScreenPoint();
-    const {
-      x: winX,
-      y: winY,
-      width: winW,
-      height: winH,
-    } = mainWindow.getBounds();
-
-    // 💡 Check if the cursor is inside the window
-    const isCursorInside =
-      x >= winX && x <= winX + winW && y >= winY && y <= winY + winH;
-
-    if (!isCursorInside) return; // ✅ Don't move if cursor is not hovering on the window
-
-    const display = screen.getDisplayNearestPoint({ x, y });
-    const screenBounds = display.workArea;
-
-    let newX = winX;
-    let newY = winY;
-
-    const spaceAbove = y - screenBounds.y;
-    const spaceBelow = screenBounds.y + screenBounds.height - (y + winH);
-    const spaceLeft = x - screenBounds.x;
-    const spaceRight = screenBounds.x + screenBounds.width - (x + winW);
-
-    if (spaceBelow >= winH + 10) {
-      newY = y + 10;
-    } else if (spaceAbove >= winH + 10) {
-      newY = y - winH - 10;
-    }
-
-    if (spaceRight >= winW + 10) {
-      newX = x + 10;
-    } else if (spaceLeft >= winW + 10) {
-      newX = x - winW - 10;
-    }
-
-    // Clamp window within screen bounds
-    newX = Math.max(
-      screenBounds.x,
-      Math.min(newX, screenBounds.x + screenBounds.width - winW),
-    );
-    newY = Math.max(
-      screenBounds.y,
-      Math.min(newY, screenBounds.y + screenBounds.height - winH),
-    );
-
-    // 🧠 Only move if position has changed
-    if (newX !== winX || newY !== winY) {
-      mainWindow.setPosition(newX, newY);
-      // mainWindow.setBounds({ x: , y: , width: winW, height: winH });
-    }
-  }, 10);
-};
 
 const createWindow = async () => {
   if (mainWindow) return;
@@ -136,6 +57,7 @@ const createWindow = async () => {
     width: 768,
     height: 480,
     skipTaskbar: true,
+    alwaysOnTop: true,
     // resizable: false,
     frame: false, // ✅ Remove default window frame
     minimizable: false,
@@ -155,12 +77,16 @@ const createWindow = async () => {
     mainWindow = null;
   });
 
+  mainWindow.setContentProtection(true);
+  mainWindow.setMenu(null);
   mainWindow.setAlwaysOnTop(true, 'screen-saver');
+  mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+
   mainWindow.loadURL(resolveHtmlPath('index.html'));
   mainWindow.on('ready-to-show', () => {
-    const hwndBuffer = mainWindow?.getNativeWindowHandle();
-    const hwnd = hwndBuffer?.readBigUInt64LE();
-    makewindowtransparent.setAffinity(hwnd);
+    // const hwndBuffer = mainWindow?.getNativeWindowHandle();
+    // const hwnd = hwndBuffer?.readBigUInt64LE();
+    // makewindowtransparent.setAffinity(hwnd);
 
     if (!mainWindow) {
       throw new Error('"mainWindow" is not defined');
@@ -194,12 +120,6 @@ app.on('window-all-closed', () => {
   }
 });
 
-app.on('before-quit', () => {
-  if (ctrlTracker) {
-    ctrlTracker?.kill();
-  }
-});
-
 app.on('will-quit', () => {
   globalShortcut.unregisterAll();
 });
@@ -210,6 +130,10 @@ app.on('before-quit', () => {
 });
 
 app.whenReady().then(() => {
+  if (process.platform === 'darwin') {
+    app.dock.hide();
+  }
+
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
     // eslint-disable-next-line promise/no-callback-in-promise
     callback({
@@ -237,27 +161,26 @@ app.whenReady().then(() => {
     if (!mainWindow) return;
     if (mainWindow.isMinimized()) {
       mainWindow.restore();
-      const hwndBuffer = mainWindow?.getNativeWindowHandle();
-      const hwnd = hwndBuffer?.readBigUInt64LE();
-      makewindowtransparent.setAffinity(hwnd);
+      // const hwndBuffer = mainWindow?.getNativeWindowHandle();
+      // const hwnd = hwndBuffer?.readBigUInt64LE();
+      // makewindowtransparent.setAffinity(hwnd);
     } else {
       mainWindow.minimize();
     }
   });
 
-  // globalShortcut.register('Alt+C', () => {
-  //   if (!mainWindow) return;
-  //   if (clickable) {
-  //     mainWindow.setIgnoreMouseEvents(false);
-  //     clickable = false;
-  //   } else {
-  //     mainWindow.setIgnoreMouseEvents(true);
-  //     clickable = true;
-  //   }
-  // });
+  globalShortcut.register('Alt+C', () => {
+    if (!mainWindow) return;
+    if (clickable) {
+      mainWindow.setIgnoreMouseEvents(false);
+      clickable = false;
+    } else {
+      mainWindow.setIgnoreMouseEvents(true);
+      clickable = true;
+    }
+  });
 
   createWindow();
-  initializeCtrlTracker();
   // trackCursorPosition();
   app.on('activate', () => {
     // On macOS it's common to re-create a window in the app when the
