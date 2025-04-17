@@ -91,7 +91,7 @@ export default function App() {
     return <LoginPage setIsAuthenticated={setIsAuthenticated} />;
   }
   return (
-    <div className="h-full w-full p-4">
+    <div className="h-full w-full p-4 border-2 border-red-400">
       <Solution solution={solutionText} />
     </div>
   );

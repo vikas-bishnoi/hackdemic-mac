@@ -6,11 +6,9 @@ import {
   ipcMain,
   globalShortcut,
   session,
-  screen,
 } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
-import { ChildProcess, spawn } from 'child_process';
 import { resolveHtmlPath } from './util';
 
 // const makewindowtransparent = require('../../assets/windows/makewindowtransparent.node');
@@ -81,13 +79,10 @@ const createWindow = async () => {
   mainWindow.setMenu(null);
   mainWindow.setAlwaysOnTop(true, 'screen-saver');
   mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  mainWindow.setHiddenInMissionControl(true);
 
   mainWindow.loadURL(resolveHtmlPath('index.html'));
   mainWindow.on('ready-to-show', () => {
-    // const hwndBuffer = mainWindow?.getNativeWindowHandle();
-    // const hwnd = hwndBuffer?.readBigUInt64LE();
-    // makewindowtransparent.setAffinity(hwnd);
-
     if (!mainWindow) {
       throw new Error('"mainWindow" is not defined');
     }
