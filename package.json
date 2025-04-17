@@ -14,18 +14,18 @@
     "hot",
     "reload"
   ],
-  "homepage": "https://github.com/vikaskbm/hackdemic#readme",
+  "homepage": "https://github.com/hackdemic/hackdemic#readme",
   "bugs": {
-    "url": "https://github.com/vikaskbm/hackdemic/issues"
+    "url": "https://github.com/hackdemic/hackdemic/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vikaskbm/hackdemic.git"
+    "url": "git+https://github.com/hackdemic/hackdemic.git"
   },
   "license": "MIT",
   "author": {
-    "name": "Electron React Boilerplate Maintainers",
-    "email": "vikaskbm@gmail.com",
+    "name": "hackdemic",
+    "email": "hackdemic@gmail.com",
     "url": "https://hackedemic.com"
   },
   "contributors": [
@@ -263,7 +263,7 @@
     "publish": {
       "provider": "github",
       "owner": "hackdemic",
-      "repo": "vikaskbm"
+      "repo": "hackdemic"
     }
   },
   "collective": {
